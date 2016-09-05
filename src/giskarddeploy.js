@@ -65,7 +65,6 @@ var GiskardDeploy = function() {
                     target = newItem;
                 }
             });
-        console.log(JSON.stringify(groups, null, 2));
         return generateRawTree(groups);
     }
 
@@ -77,14 +76,12 @@ var GiskardDeploy = function() {
                     private;
                 response.user.ask('Qual a chave *pública*? :old_key: ', this.Context.REGEX, /(.*)$/im)
                     .then((answer) => {
-                        console.log(answer);
                         public = (answer.match[1] || '').replace(/`/g, '').trim();
                         if (!public.length) {
                             return answer.reply('Preciso que me informe a chave pública :disappointed:');
                         }
                         answer.user.ask('Ok, e qual a chave *privada*? :old_key: ', this.Context.REGEX, /(.*)$/im)
                             .then((answer) => {
-                                console.log(answer);
                                 private = (answer.match[1] || '').replace(/`/g, '').trim();
                                 if (!private.length) {
                                     return answer.reply('Preciso que me informe a chave privada, pode confiar em mim! :disappointed:');
@@ -137,7 +134,6 @@ var GiskardDeploy = function() {
         response.getUser().then(u => {
             if (u.isRoot()) {
                 return new Promise((resolve, reject) => {
-                        console.log(response.match[0].indexOf('deploy.new'));
                         if (response.match[0].indexOf('deploy.new') != -1) {
                             if (response.match[2]) {
                                 name = (response.match[2] || '').trim();
@@ -168,7 +164,6 @@ var GiskardDeploy = function() {
                         }).exec();
                     })
                     .then((result) => {
-                        console.log(result);
                         if (result) {
                             response.reply(`> :warning: Este projeto já existe e será sobrescrito caso continue :warning:`);
                         }
