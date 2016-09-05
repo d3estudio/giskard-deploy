@@ -48,6 +48,7 @@ var GiskardDeploy = function() {
                     var newItem = {
                         name,
                         children: [],
+                        parent: target,
                         path: (() => {
                             var parent = target;
                             var tree = [];
