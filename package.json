@@ -3,16 +3,18 @@
     "version": "0.0.1",
     "description": "Piece-of-cake deploy system",
     "main": "src/giskarddeploy.js",
-    "author": "John",
-    "contributors": [],
+    "author": "Jonathan Querubina <jotadev@me.com>",
+    "contributors": ["Victor Gama <hey@vito.io> (https://vito.io)"],
     "license": "MIT",
     "giskard": {
         "module": "GiskardDeploy",
         "created": "Mon Sep 05 2016 01:13:58 GMT+0000 (UTC)",
         "help": {
-            "Configure suas chaves / deploy.config.keys": "Configure the SSH key to allow the bot to access a server",
-            "Qual sua chave publica? / deploy.pubkey": "Return the SSH key public key current configured on the bot",
-            "Configure deploy (para `appname`) / deploy.new": "Start the configuration process of a project"
+            "Configure suas chaves / deploy.config.keys": "Inicia o assistente de configuração para obtenção de um KeyPair.",
+            "Qual sua chave publica? / deploy.pubkey": "Retorna o valor da chave publica pertencente à KeyPair do bot.",
+            "Configure deploy (para `appname`) / deploy.new": "Inicia o assistente de configuração de projeto.",
+            "Liste projetos de deploy / Liste deploys configurados / deploy.list": "Lista todos os projetos configurados para deploy.",
+            "esqueça o projeto `appname` / deploy.forget `appname`": "Remove configurações de um determinado projeto da base."
         }
     },
     "dependencies": {
