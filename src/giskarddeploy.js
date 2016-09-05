@@ -16,14 +16,14 @@ var GiskardDeploy = function() {
         commands: String
     });
 
-    const generateTree = (arr) => {
-        let groups = {
+    var generateTree = (arr) => {
+        var groups = {
             name: 'Projects',
             children: []
         };
-        const generateRawTree = (child, level) => {
+        var generateRawTree = (child, level) => {
             level = level || 1;
-            let input = '';
+            var input = '';
             if(child.name !== '/') {
                 input = '#'.repeat(level) + child.name;
             }
@@ -35,22 +35,22 @@ var GiskardDeploy = function() {
         };
         arr.sort()
             .forEach(p => {
-                const components = p.split('/');
-                let target = groups;
-                for(let i = 0; i < components.length; i++) {
-                    const name = components[i];
-                    const t = target.children.find(x => x.name === name);
+                var components = p.split('/');
+                var target = groups;
+                for(var i = 0; i < components.length; i++) {
+                    var name = components[i];
+                    var t = target.children.find(x => x.name === name);
                     if(t) {
                         target = t;
                         continue;
                     }
 
-                    const newItem = {
+                    var newItem = {
                         name,
                         children: [],
                         path: (() => {
-                            let parent = target;
-                            let tree = [];
+                            var parent = target;
+                            var tree = [];
                             while(parent) {
                                 if(parent.name !== 'Projects') {
                                     tree.push(parent.name);
