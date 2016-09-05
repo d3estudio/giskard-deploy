@@ -1,0 +1,21 @@
+{
+    "name": "giskard-deploy",
+    "version": "0.0.1",
+    "description": "Piece-of-cake deploy system",
+    "main": "src/giskarddeploy.js",
+    "author": "John",
+    "contributors": [],
+    "license": "MIT",
+    "giskard": {
+        "module": "GiskardDeploy",
+        "created": "Mon Sep 05 2016 01:13:58 GMT+0000 (UTC)",
+        "help": {
+            "Configure suas chaves / deploy.config.keys": "Configure the SSH key to allow the bot to access a server",
+            "Qual sua chave publica? / deploy.pubkey": "Return the SSH key public key current configured on the bot",
+            "Configure deploy (para `appname`) / deploy.new": "Start the configuration process of a project"
+        }
+    },
+    "dependencies": {
+        "ascii-tree": "^0.3.0"
+    }
+}
