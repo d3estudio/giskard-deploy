@@ -310,13 +310,13 @@ var GiskardDeploy = function() {
                                         userName: project.user,
                                         privateKey: key.private
                                     },
-                                    idleTimeOut: 5 * 60000,
+                                    idleTimeOut: 2 * 60000,
                                     commands: project.commands.split('\n'),
                                     onCommandComplete: (command, output) => {
                                         response.reply(`\`${command}\` :hourglass: \`\`\`${output}\`\`\``);
                                     },
                                     onCommandTimeout: (command, response, stream, connection) => {
-                                        response.reply(`IH! \`${command}\` demorou demais pra executar (só pude esperar 5 minutinhos, o metrô estava chegando) :disappointed: \`\`\`${response}\`\`\``);
+                                        response.reply(`IH! \`${command}\` demorou demais pra executar (só pude esperar 2 minutinhos, o metrô estava chegando) :disappointed: \`\`\`${response}\`\`\``);
                                         currentDeploys.remove(project.name);
                                     },
                                     onEnd: (sessionText) => {
