@@ -1,23 +1,26 @@
 {
-    "name": "giskard-deploy",
-    "version": "0.0.2",
-    "description": "Piece-of-cake deploy system",
-    "main": "src/giskarddeploy.js",
-    "author": "Jonathan Querubina <jotadev@me.com>",
-    "contributors": ["Victor Gama <hey@vito.io> (https://vito.io)"],
-    "license": "MIT",
-    "giskard": {
-        "module": "GiskardDeploy",
-        "created": "Mon Sep 05 2016 01:13:58 GMT+0000 (UTC)",
-        "help": {
-            "Configure suas chaves / deploy.config.keys": "Inicia o assistente de configuração para obtenção de um KeyPair.",
-            "Qual sua chave publica? / deploy.pubkey": "Retorna o valor da chave publica pertencente à KeyPair do bot.",
-            "Configure deploy (para `appname`) / deploy.new": "Inicia o assistente de configuração de projeto.",
-            "Liste projetos de deploy / Liste deploys configurados / deploy.list": "Lista todos os projetos configurados para deploy.",
-            "esqueça o projeto `appname` / deploy.forget `appname`": "Remove configurações de um determinado projeto da base."
-        }
-    },
-    "dependencies": {
-        "ascii-tree": "^0.3.0"
+  "name": "giskard-deploy",
+  "version": "0.0.2",
+  "description": "Piece-of-cake deploy system",
+  "main": "src/giskarddeploy.js",
+  "author": "Jonathan Querubina <jotadev@me.com>",
+  "contributors": [
+    "Victor Gama <hey@vito.io> (https://vito.io)"
+  ],
+  "license": "MIT",
+  "giskard": {
+    "module": "GiskardDeploy",
+    "created": "Mon Sep 05 2016 01:13:58 GMT+0000 (UTC)",
+    "help": {
+      "Configure suas chaves / deploy.config.keys": "Inicia o assistente de configuração para obtenção de um KeyPair.",
+      "Qual sua chave publica? / deploy.pubkey": "Retorna o valor da chave publica pertencente à KeyPair do bot.",
+      "Configure deploy (para `appname`) / deploy.new": "Inicia o assistente de configuração de projeto.",
+      "Liste projetos de deploy / Liste deploys configurados / deploy.list": "Lista todos os projetos configurados para deploy.",
+      "esqueça o projeto `appname` / deploy.forget `appname`": "Remove configurações de um determinado projeto da base."
     }
+  },
+  "dependencies": {
+    "ascii-tree": "^0.3.0",
+    "ssh2": "^0.5.1"
+  }
 }

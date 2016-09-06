@@ -1,5 +1,6 @@
 var Base = requireBaseModule();
 var tree = require('ascii-tree');
+var Client = require('ssh2').Client;
 
 var GiskardDeploy = function() {
     Base.call(this);
@@ -16,6 +17,14 @@ var GiskardDeploy = function() {
         commands: String
     });
 
+    var normaliseKey = (key) => {
+        var data = key.replace(/`/g, '')
+            .trim().split('\n');
+        data.pop();
+        data.push('-----END RSA PRIVATE KEY-----');
+        return data.join('\n');
+    };
+
     var generateTree = (arr) => {
         var groups = {
             name: 'Projects',
@@ -24,10 +33,10 @@ var GiskardDeploy = function() {
         var generateRawTree = (child, level) => {
             level = level || 1;
             var input = '';
-            if(child.name !== '/') {
+            if (child.name !== '/') {
                 input = '#'.repeat(level) + child.name;
             }
-            if(!child.children.length) {
+            if (!child.children.length) {
                 input += ` (${child.path})`;
             }
             input += "\n" + child.children.map(c => generateRawTree(c, level + 1)).join('');
@@ -37,10 +46,10 @@ var GiskardDeploy = function() {
             .forEach(p => {
                 var components = p.split('/');
                 var target = groups;
-                for(var i = 0; i < components.length; i++) {
+                for (var i = 0; i < components.length; i++) {
                     var name = components[i];
                     var t = target.children.find(x => x.name === name);
-                    if(t) {
+                    if (t) {
                         target = t;
                         continue;
                     }
@@ -52,8 +61,8 @@ var GiskardDeploy = function() {
                         path: (() => {
                             var parent = target;
                             var tree = [];
-                            while(parent) {
-                                if(parent.name !== 'Projects') {
+                            while (parent) {
+                                if (parent.name !== 'Projects') {
                                     tree.push(parent.name);
                                 }
                                 parent = parent.parent;
@@ -74,18 +83,20 @@ var GiskardDeploy = function() {
             if (u.isRoot()) {
                 var public,
                     private;
-                response.user.ask('Qual a chave *pública*? :old_key: ', this.Context.REGEX, /(.*)$/im)
+                response.ask('Qual a chave *pública*? :old_key: ', this.Context.REGEX, /([\s\S]*)/m)
                     .then((answer) => {
-                        public = (answer.match[1] || '').replace(/`/g, '').trim();
+                        public = normaliseKey(answer.match[1] || '');
                         if (!public.length) {
                             return answer.reply('Preciso que me informe a chave pública :disappointed:');
                         }
-                        answer.user.ask('Ok, e qual a chave *privada*? :old_key: ', this.Context.REGEX, /(.*)$/im)
+                        answer.user.ask('Ok, e qual a chave *privada*? :old_key: ', this.Context.REGEX, /([\s\S]*)/m)
                             .then((answer) => {
-                                private = (answer.match[1] || '').replace(/`/g, '').trim();
+                                console.log(answer.match[1]);
+                                private = normaliseKey(answer.match[1] || '');
                                 if (!private.length) {
                                     return answer.reply('Preciso que me informe a chave privada, pode confiar em mim! :disappointed:');
                                 }
+                                console.log(private);
                                 Keys.update({}, {
                                     public, private
                                 }, {
@@ -110,17 +121,11 @@ var GiskardDeploy = function() {
 
     this.respond(/((?:qual sua chave p(?:u|ú)blica\??)|(?:deploy\.pubkey))$/i, (response) => {
         response.sendTyping();
-        response.getUser().then(u => {
-            if (u.isRoot()) {
-                Keys.find({}, 'public', (err, result) => {
-                    if (result.length) {
-                        response.reply(`Esta: \n\`\`\`${result[0].public}\`\`\``);
-                    } else {
-                        response.reply(`Não tenho nenhuma configurada ainda :(`);
-                    }
-                });
+        Keys.find({}, 'public', (err, result) => {
+            if (result.length) {
+                response.reply(`Esta: \n\`\`\`${result[0].public}\`\`\``);
             } else {
-                response.reply('Você não pode falar assim comigo :(');
+                response.reply(`Não tenho nenhuma configurada ainda :(`);
             }
         });
     });
@@ -131,97 +136,94 @@ var GiskardDeploy = function() {
             host,
             commands;
         response.sendTyping();
-        response.getUser().then(u => {
-            if (u.isRoot()) {
-                return new Promise((resolve, reject) => {
-                        if (response.match[0].indexOf('deploy.new') != -1) {
-                            if (response.match[2]) {
-                                name = (response.match[2] || '').trim();
-                                return resolve();
-                            } else {
-                                response.user.ask('Qual o nome do projeto? :secret:', this.Context.REGEX, /(.*)$/i)
-                                    .then((answer) => {
-                                        name = (answer.match[1] || '').trim();
-                                        if (name.length) {
-                                            return resolve();
-                                        } else {
-                                            return reject('Preciso saber o nome do projeto :(');
-                                        }
-                                    })
-                            }
+        return new Promise((resolve, reject) => {
+                if (response.match[0].indexOf('deploy.new') != -1) {
+                    if (response.match[2]) {
+                        name = (response.match[2] || '').trim();
+                        return resolve();
+                    } else {
+                        response.ask('Qual o nome do projeto? :secret:', this.Context.REGEX, /(.*)$/i)
+                            .then((answer) => {
+                                name = (answer.match[1] || '').trim();
+                                if (name.length) {
+                                    return resolve();
+                                } else {
+                                    return reject('Preciso saber o nome do projeto :(');
+                                }
+                            })
+                    }
+                } else {
+                    name = (response.match[1] || '').trim();
+                    if (name.length) {
+                        return resolve();
+                    } else {
+                        return reject('Preciso saber o nome do projeto :(');
+                    }
+                }
+            })
+            .then(() => {
+                return Projects.findOne({
+                    name: name
+                }).exec();
+            })
+            .then((result) => {
+                if (result) {
+                    response.reply(`> :warning: Este projeto já existe e será sobrescrito caso continue :warning:`);
+                }
+                return response.ask('Qual usuário devo usar para autenticar-me no servidor remoto? :secret:', this.Context.REGEX, /(.*)$/i)
+                    .then((answer) => {
+                        user = (answer.match[1] || '').trim();
+                        if (user.length) {
+                            return Promise.resolve();
                         } else {
-                            name = (response.match[1] || '').trim();
-                            if (name.length) {
-                                return resolve();
-                            } else {
-                                return reject('Preciso saber o nome do projeto :(');
-                            }
+                            return Promise.reject('Preciso saber o nome do usuario :(');
                         }
                     })
-                    .then(() => {
-                        return Projects.findOne({
-                            name: name
-                        }).exec();
-                    })
-                    .then((result) => {
-                        if (result) {
-                            response.reply(`> :warning: Este projeto já existe e será sobrescrito caso continue :warning:`);
+            })
+            .then(() => {
+                return response.ask('Qual o endereço do servidor remoto? :secret:', this.Context.REGEX, /(.*)$/i)
+                    .then((answer) => {
+                        host = (answer.match[1] || '').trim();
+                        if (host.length) {
+                            return Promise.resolve();
+                        } else {
+                            return Promise.reject('Preciso saber o nome do usuario :(');
                         }
-                        return response.user.ask('Qual usuário devo usar para autenticar-me no servidor remoto? :secret:', this.Context.REGEX, /(.*)$/i)
-                            .then((answer) => {
-                                user = (answer.match[1] || '').trim();
-                                if (user.length) {
-                                    return Promise.resolve();
-                                } else {
-                                    return Promise.reject('Preciso saber o nome do usuario :(');
-                                }
-                            })
                     })
-                    .then(() => {
-                        return response.user.ask('Qual o endereço do servidor remoto? :secret:', this.Context.REGEX, /(.*)$/i)
-                            .then((answer) => {
-                                host = (answer.match[1] || '').trim();
-                                if (host.length) {
-                                    return Promise.resolve();
-                                } else {
-                                    return Promise.reject('Preciso saber o nome do usuario :(');
-                                }
-                            })
-                    })
-                    .then(() => {
-                        return response.user.ask('Forneça quais comandos devo utilizar para realizar o deploy. Utilize três backticks caso seja mais complicado do que uma linha :smirk:', this.Context.REGEX, /(.*)$/i)
-                            .then((answer) => {
-                                commands = (answer.match[1] || '').trim();
-                                if (commands.length) {
+            })
+            .then(() => {
+                return response.ask('Forneça quais comandos devo utilizar para realizar o deploy. Utilize três backticks caso seja mais complicado do que uma linha :smirk:', this.Context.REGEX, /([\s\S]*)/m)
+                    .then((answer) => {
+                        commands = (answer.match[1] || '').replace(/`/g, '').trim();
+                        if (commands.length) {
+                            Projects
+                                .update({
+                                    name: name
+                                }, {
+                                    name, user, host, commands
+                                }, {
+                                    upsert: true
+                                }).then((err, result) => {
                                     Keys.find({}, 'public', (err, result) => {
                                         if (result.length) {
                                             answer.reply(`Pronto! Não esqueça de adicionar a seguinte chave ao \`authorized_keys\`\n\`\`\`${result[0].public}\`\`\``)
                                         } else {
                                             answer.reply(`Pronto! Não esqueça de me dar uma chave privada para trabalhar nesse server com o comando \`configure suas chaves\` ou \`deploy.configure\` \`\`\``)
                                         }
-                                        Projects.update({name: name}, {
-                                            name, user, host, commands
-                                        }, {
-                                            upsert: true
-                                        }).then((err, result) => {
-                                            console.log(err, result);
-                                        })
+
                                     });
-                                } else {
-                                    return Promise.reject('Me ensina os comandos, nunca te pedi nada :(');
-                                }
-                            })
-                    })
-                    .catch((err) => {
-                        if (!err) {
-                            err = 'Fazemos depois então!';
+                                })
+                        } else {
+                            return Promise.reject('Me ensina os comandos, nunca te pedi nada :(');
                         }
-                        return response.reply(`${err}`);
                     })
-            } else {
-                response.reply('Você não pode falar assim comigo :(');
-            }
-        });
+            })
+            .catch((err) => {
+                if (!err) {
+                    err = 'Fazemos depois então!';
+                }
+                return response.reply(`${err}`);
+            })
     });
 
     this.respond(/(?:(?:liste (?:projetos de deploy|deploys configurados)|deploy\.list))/i, (response) => {
@@ -230,7 +232,7 @@ var GiskardDeploy = function() {
             .find()
             .exec()
             .then(arr => {
-                if(arr.length < 1) {
+                if (arr.length < 1) {
                     return response.reply(':hushed: Parece que não existe nenhum projeto de deploy configurado.');
                 }
                 response.reply('Você pediu, aqui está. Eu mesmo desenhei, espero que goste. :robin:')
@@ -238,6 +240,83 @@ var GiskardDeploy = function() {
             })
             .catch(e => console.error(e));
     });
+
+    this.respond(/(?:(?:esque(?:c|ç)a o projeto)|deploy\.forget)\s([^\s]+)/i, (response) => {
+        response.sendTyping();
+        var name = (response.match[1] || '').trim();
+        if (name.length < 1) {
+            return response.reply('Preciso saber o nome do projeto :(');
+        }
+        Projects
+            .find({
+                name: name
+            })
+            .exec()
+            .then(arr => {
+                if (arr.length < 1) {
+                    return response.reply(':hushed: Parece que não existe nenhum projeto com este nome.');
+                }
+                arr[0].remove((err) => {
+                    if (err) {
+                        return response.reply('Algo deu ruim! Tenta de novo, por favor!');
+                    }
+                    response.reply('Removido com sucesso champs! :ok_hand:');
+                });
+            })
+            .catch(e => console.error(e));
+    });
+
+    this.respond(/deploy\s([^\s]+)/i, (response) => {
+        if (response.channel.name && response.channel.name == 'mission-control') {
+            var name = (response.match[1] || '').trim();
+            if (name.length < 1) {
+                return response.reply('Preciso saber o nome do projeto :(');
+            }
+            Projects
+                .find({
+                    name: name
+                })
+                .exec()
+                .then(arr => {
+                    if (arr.length < 1) {
+                        return response.reply(':hushed: Parece que não existe nenhum projeto com este nome.');
+                    }
+                    var project = arr[0];
+                    Keys
+                        .find({}, 'private', ((err, result) => {
+                            if (result.length) {
+                                var key = result[0];
+                                var conn = new Client();
+                                conn.on('ready', function() {
+                                    response.reply('Vamos lá!');
+                                    conn.exec('ls', function(err, stream) {
+                                        if (err) throw err;
+                                        stream.on('close', function(code, signal) {
+                                            console.log('Stream :: close :: code: ' + code + ', signal: ' + signal);
+                                            conn.end();
+                                        }).on('data', function(data) {
+                                            console.log('STDOUT: ' + data);
+                                        }).stderr.on('data', function(data) {
+                                            console.log('STDERR: ' + data);
+                                        });
+                                    });
+                                }).connect({
+                                    host: project.host,
+                                    port: 22,
+                                    username: project.user,
+                                    privateKey: key.private
+                                });
+                            } else {
+                                response.reply('Não tenho nenhuma chave privada configurada :(');
+                            }
+                        }))
+                })
+                .catch(e => console.error(e));
+        } else {
+            response.reply('Esse comando precisa ser lá no Mission Control :heart:');
+        }
+    });
+
 };
 
 module.exports = Base.setup(GiskardDeploy);
