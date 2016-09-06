@@ -1,6 +1,19 @@
 var Base = requireBaseModule();
 var tree = require('ascii-tree');
-var Client = require('ssh2').Client;
+var SSH2Shell = require('ssh2shell');
+
+Array.prototype.remove = function() {
+    var what, a = arguments,
+        L = a.length,
+        ax;
+    while (L && this.length) {
+        what = a[--L];
+        while ((ax = this.indexOf(what)) !== -1) {
+            this.splice(ax, 1);
+        }
+    }
+    return this;
+};
 
 var GiskardDeploy = function() {
     Base.call(this);
@@ -24,6 +37,8 @@ var GiskardDeploy = function() {
         data.push('-----END RSA PRIVATE KEY-----');
         return data.join('\n');
     };
+
+    var currentDeploys = [];
 
     var generateTree = (arr) => {
         var groups = {
@@ -91,12 +106,10 @@ var GiskardDeploy = function() {
                         }
                         answer.user.ask('Ok, e qual a chave *privada*? :old_key: ', this.Context.REGEX, /([\s\S]*)/m)
                             .then((answer) => {
-                                console.log(answer.match[1]);
                                 private = normaliseKey(answer.match[1] || '');
                                 if (!private.length) {
                                     return answer.reply('Preciso que me informe a chave privada, pode confiar em mim! :disappointed:');
                                 }
-                                console.log(private);
                                 Keys.update({}, {
                                     public, private
                                 }, {
@@ -282,30 +295,43 @@ var GiskardDeploy = function() {
                         return response.reply(':hushed: Parece que não existe nenhum projeto com este nome.');
                     }
                     var project = arr[0];
+                    if (currentDeploys.indexOf(project.name) != -1) {
+                        return response.reply('Ué! Já estou fazendo este deploy, checa lá no nosso canal! :skull:');
+                    }
                     Keys
                         .find({}, 'private', ((err, result) => {
                             if (result.length) {
                                 var key = result[0];
-                                var conn = new Client();
-                                conn.on('ready', function() {
-                                    response.reply('Vamos lá!');
-                                    conn.exec('ls', function(err, stream) {
-                                        if (err) throw err;
-                                        stream.on('close', function(code, signal) {
-                                            console.log('Stream :: close :: code: ' + code + ', signal: ' + signal);
-                                            conn.end();
-                                        }).on('data', function(data) {
-                                            console.log('STDOUT: ' + data);
-                                        }).stderr.on('data', function(data) {
-                                            console.log('STDERR: ' + data);
-                                        });
-                                    });
-                                }).connect({
-                                    host: project.host,
-                                    port: 22,
-                                    username: project.user,
-                                    privateKey: key.private
-                                });
+                                var STDOUT = '';
+                                var host = {
+                                    server: {
+                                        host: project.host,
+                                        port: 22,
+                                        userName: project.user,
+                                        privateKey: key.private
+                                    },
+                                    idleTimeOut: 5 * 60000,
+                                    commands: project.commands.split('\n'),
+                                    onCommandComplete: (command, output) => {
+                                        response.reply(`\`${command}\` :hourglass: \`\`\`${output}\`\`\``);
+                                    },
+                                    onCommandTimeout: (command, response, stream, connection) => {
+                                        response.reply(`IH! \`${command}\` demorou demais pra executar (só pude esperar 5 minutinhos, o metrô estava chegando) :disappointed: \`\`\`${response}\`\`\``);
+                                        currentDeploys.remove(project.name);
+                                    },
+                                    onEnd: (sessionText) => {
+                                        response.reply('Pronto! Já pode avisar a galera de QA :ok_hand:');
+                                        currentDeploys.remove(project.name);
+                                    },
+                                    onError: (err, type) => {
+                                        response.reply(`Eita! :disappointed: \`\`\`${err}\`\`\``);
+                                        currentDeploys.remove(project.name);
+                                    }
+                                }
+                                response.reply('Vamos lá! :knife: :skull:');
+                                currentDeploys.push(project.name);
+                                var client = new SSH2Shell(host);
+                                client.connect();
                             } else {
                                 response.reply('Não tenho nenhuma chave privada configurada :(');
                             }
