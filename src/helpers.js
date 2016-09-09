@@ -47,7 +47,10 @@ module.exports = {
         };
     },
     normaliseKey: (key, isPrivate) => {
-        var data = key.replace(/`/g, '').trim();
+        var data = key
+            .replace(/`/g, '')
+            .replace(/\<[^\|]+\|(.*)\>/g, '$1')
+            .trim();
         if(isPrivate) {
             data = data.split('\n');
             data.pop();
