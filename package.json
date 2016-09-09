@@ -1,6 +1,6 @@
 {
   "name": "giskard-deploy",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "Piece-of-cake deploy system",
   "main": "src/giskarddeploy.js",
   "author": "Jonathan Querubina <jotadev@me.com>",
@@ -16,11 +16,17 @@
       "Qual sua chave publica? / deploy.pubkey": "Retorna o valor da chave publica pertencente à KeyPair do bot.",
       "Configure deploy (para `appname`) / deploy.new": "Inicia o assistente de configuração de projeto.",
       "Liste projetos de deploy / Liste deploys configurados / deploy.list": "Lista todos os projetos configurados para deploy.",
-      "esqueça o projeto `appname` / deploy.forget `appname`": "Remove configurações de um determinado projeto da base."
+      "Esqueça o projeto `appname` / deploy.forget `appname`": "Remove configurações de um determinado projeto da base.",
+      "Deploy `appname`": "Inicia um processo de deploy para `appname`",
+      "(Mostre os)( últimos )deploys em `appname`/deploy.history `appname`": "Exibe uma lista com os últimos deploys executados contra `appname`.",
+      "Mostre o resultado do deploy `id`/deploy.show `id`": "Mostra o resultado do deploy com id `id`",
+      "(Mostre os )(últimos )deploys em `appname`/deploy.history `appname`": "Mostra uma lista com os últimos 10 deploys executados contra `appname`"
     }
   },
   "dependencies": {
     "ascii-tree": "^0.3.0",
-    "ssh2shell": "^1.5.5"
+    "octonode": "^0.7.6",
+    "ssh2shell": "^1.5.5",
+    "timeago.js": "^1.0.9"
   }
 }
