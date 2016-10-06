@@ -48,6 +48,17 @@ var GiskardDeploy = function() {
 
     var currentDeploys = [];
 
+    this.launchMessages = [
+        "$, this is Romeo Two Delta Three. Launch granted, over.",
+        "$, this is Control. Ground crew is secure, over.",
+        "Control, this is $. Prestart complete. Powering up APU's, over.",
+        "$, this is Control. APU start is go. You are on your on-board computer, over.",
+        "$, this is Control. Go for main engine cut-off, over.",
+        "The solid rocket boosters have ignited, and we have LIFTOFF! The $ has cleared the tower.",
+        "The tower has been cleared. All engines look good. Beginning roll maneuver."
+    ];
+    this.orbiters = "Enterprise Columbia Challenger Discovery Atlantis Endeavour".split(' ');
+
     this.respond(/((?:configure suas chaves)|(?:deploy\.config\.keys))$/i, (response) => {
         response.sendTyping();
         response.getUser().then(u => {
@@ -353,6 +364,10 @@ var GiskardDeploy = function() {
                         text: `Deploy \`${deployLog._id}\` @ \`${project.name}\` *iniciado* por @${deployer.username}.`
                     })])
                     .catch(e => this.logger.error(e));
+
+                    var orbiter = this.random(this.orbiter),
+                        message = this.random(this.launchMessages);
+                    response.reply(message.replace(/\$/g, orbiter) + ' :rocket:');
 
                     currentDeploys.push(project.name);
                     var client = new SSH2Shell(sshSettings);
