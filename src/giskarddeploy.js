@@ -365,7 +365,7 @@ var GiskardDeploy = function() {
                     })])
                     .catch(e => this.logger.error(e));
 
-                    var orbiter = this.random(this.orbiter),
+                    var orbiter = this.random(this.orbiters),
                         message = this.random(this.launchMessages);
                     response.reply(message.replace(/\$/g, orbiter) + ' :rocket:');
 
