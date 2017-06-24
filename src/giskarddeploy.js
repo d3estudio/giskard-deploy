@@ -259,7 +259,7 @@ var GiskardDeploy = function() {
             .catch(e => console.error(e));
     });
 
-    this.repond(/deploy\s([a-f0-9]+)\s(?:para|to)\s([^\s]+)/i, (response) => {
+    this.respond(/deploy\s([a-f0-9]+)\s(?:para|to)\s([^\s]+)/i, (response) => {
         response.sendTyping();
         let name, tag, deployer, project, missionChannel;
         tag = response.match[2].trim();
