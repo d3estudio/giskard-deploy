@@ -259,10 +259,10 @@ var GiskardDeploy = function() {
             .catch(e => console.error(e));
     });
 
-    this.respond(/deploy\s([a-f0-9]+)\s(?:para|to)\s([^\s]+)/i, (response) => {
+    this.respond(/deploy\s([a-f0-9]+)\s(?:para|em|to)\s([^\s]+)/i, (response) => {
         response.sendTyping();
         let name, tag, deployer, project, missionChannel;
-        tag = response.match[2].trim();
+        tag = response.match[1].trim();
         this.searchChannel('mission-control')
             .then(m => {
                 missionChannel = m;
@@ -273,7 +273,7 @@ var GiskardDeploy = function() {
                     return Promise.reject('Receio que não posso deixar você fazer isso...');
                 }
 
-                name = (response.match[1] || '').trim();
+                name = (response.match[2] || '').trim();
                 if (name.length < 1) {
                     return Promise.reject('Preciso saber o nome do projeto :(');
                 }
