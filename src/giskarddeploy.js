@@ -31,6 +31,7 @@ var GiskardDeploy = function() {
         name: String,
         user: String,
         host: String,
+        port: String,
         commands: String
     });
 
@@ -114,6 +115,7 @@ var GiskardDeploy = function() {
         var name,
             user,
             host,
+            port,
             commands;
         response.sendTyping();
         return new Promise((resolve, reject) => {
@@ -122,7 +124,7 @@ var GiskardDeploy = function() {
                         name = (response.match[2] || '').trim();
                         return resolve();
                     } else {
-                        response.ask('Qual o nome do projeto? :secret:', this.Context.REGEX, /(.*)$/i)
+                        response.ask('Qual o nome do projeto?', this.Context.REGEX, /(.*)$/i)
                             .then((answer) => {
                                 name = (answer.match[1] || '').trim();
                                 if (name.length) {
@@ -150,7 +152,7 @@ var GiskardDeploy = function() {
                 if (result) {
                     response.reply(`> :warning: Este projeto já existe e será sobrescrito caso continue :warning:`);
                 }
-                return response.ask('Qual usuário devo usar para autenticar-me no servidor remoto? :secret:', this.Context.REGEX, /(.*)$/i)
+                return response.ask('Qual usuário devo usar para autenticar-me no servidor remoto?', this.Context.REGEX, /(.*)$/i)
                     .then((answer) => {
                         user = (answer.match[1] || '').trim();
                         if (user.length) {
@@ -161,10 +163,21 @@ var GiskardDeploy = function() {
                     })
             })
             .then(() => {
-                return response.ask('Qual o endereço do servidor remoto? :secret:', this.Context.REGEX, /(.*)$/i)
+                return response.ask('Qual o endereço do servidor remoto?', this.Context.REGEX, /(.*)$/i)
                     .then((answer) => {
                         host = (answer.match[1] || '').trim();
                         if (host.length) {
+                            return Promise.resolve();
+                        } else {
+                            return Promise.reject('Preciso saber o nome do usuario :(');
+                        }
+                    })
+            })
+            .then(() => {
+                return response.ask('Qual a porta do servidor remoto?', this.Context.REGEX, /(\d+)$/i)
+                    .then((answer) => {
+                        port = (answer.match[1] || '').trim();
+                        if (port != 0) {
                             return Promise.resolve();
                         } else {
                             return Promise.reject('Preciso saber o nome do usuario :(');
@@ -180,7 +193,7 @@ var GiskardDeploy = function() {
                                 .update({
                                     name: name
                                 }, {
-                                    name, user, host, commands
+                                    name, user, host, commands, port
                                 }, {
                                     upsert: true
                                 }).then((err, result) => {
@@ -315,7 +328,7 @@ var GiskardDeploy = function() {
                     sshSettings = {
                         server: {
                             host: project.host,
-                            port: 22,
+                            port: project.port || 22,
                             userName: project.user,
                             privateKey: key.private
                         },
@@ -451,7 +464,7 @@ var GiskardDeploy = function() {
                     sshSettings = {
                         server: {
                             host: project.host,
-                            port: 22,
+                            port: project.port || 22,
                             userName: project.user,
                             privateKey: key.private
                         },
