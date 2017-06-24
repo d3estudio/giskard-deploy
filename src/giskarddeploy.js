@@ -246,6 +246,144 @@ var GiskardDeploy = function() {
             .catch(e => console.error(e));
     });
 
+    this.repond(/deploy\s([a-f0-9]+)\s(?:para|to)\s([^\s]+)/i, (response) => {
+        response.sendTyping();
+        let name, tag, deployer, project, missionChannel;
+        tag = response.match[2].trim();
+        this.searchChannel('mission-control')
+            .then(m => {
+                missionChannel = m;
+                return response.getUser();
+            })
+            .then(u => {
+                if(!u.is('deployer')) {
+                    return Promise.reject('Receio que não posso deixar você fazer isso...');
+                }
+
+                name = (response.match[1] || '').trim();
+                if (name.length < 1) {
+                    return Promise.reject('Preciso saber o nome do projeto :(');
+                }
+
+                return u;
+            })
+            .then(u => {
+                deployer = u;
+                return Projects.findOne({ name }).exec();
+            })
+            .then(p => {
+                if(!p) {
+                    return Promise.reject(':hushed: Parece que não existe nenhum projeto com este nome.');
+                }
+                if(currentDeploys.indexOf(p.name) > -1) {
+                    return Promise.reject(':clock1: Já existe um deploy desse projeto em progresso.');
+                }
+                project = p;
+                return new Promise((resolve, reject) => {
+                    Deploys.create({
+                        project: p.name,
+                        starter: deployer.username,
+                        date: Date.now(),
+                        status: consts.DEPLOY_STATUS_STARTED,
+                        result: '',
+                    }, (err, result) => {
+                        if(err) {
+                            return reject(err);
+                        }
+                        resolve(result);
+                    });
+                })
+            })
+            .then(deployLog => {
+                return new Promise((resolve, reject) => {
+                    Keys.find({}, 'private', (err, res) => {
+                        if(res.length < 1) {
+                            return reject('Não possuo chaves configuradas! :anguished:');
+                        }
+
+                        resolve({
+                            deployLog,
+                            key: res[0]
+                        });
+                    });
+                });
+            })
+            .then(data => {
+                var commands = project.commands.split('\n').map(l => `DESIRED_TAG="${tag}" ${l}`);
+                var deployLog = data.deployLog,
+                    key = data.key,
+                    sshSettings = {
+                        server: {
+                            host: project.host,
+                            port: 22,
+                            userName: project.user,
+                            privateKey: key.private
+                        },
+                        idleTimeOut: 2 * 60 * 1000,
+                        commands: commands,
+                        onCommandComplete: (command, output) => {
+                            output = output || '';
+                            if(deployLog.result == '') {
+                                deployLog.result = output ;
+                            } else {
+                                deployLog.result += output;
+                            }
+                            deployLog.save();
+                        },
+                        onCommandTimeout:(command, response, stream, connection) => {
+                            response.reply('Seu deploy falhou devido à um timeout.');
+                            missionChannel.send('', [helpers.generateAttachment({
+                                fallback: `Deploy @ ${project.name} timed-out`,
+                                color: 'danger',
+                                text: `Deploy \`${deployLog._id}\` @ \`${project.name}\` (Tag \`${tag}\`) *timed-out*.`
+                            })])
+                        },
+                        onEnd: (sessionText) => {
+                            deployLog.status = consts.DEPLOY_STATUS_COMPLETED;
+                            deployLog.save();
+                            currentDeploys.remove(project.name);
+                            missionChannel.send('', [helpers.generateAttachment({
+                                fallback: `Deploy @ ${project.name} concluído`,
+                                color: 'good',
+                                text: `Deploy \`${deployLog._id}\` @ \`${project.name}\` (Tag \`${tag}\`) *concluído*.`
+                            })])
+                        },
+                        onError: (err, type) => {
+                            deployLog.status = consts.DEPLOY_STATUS_FAILED;
+                            deployLog.result += `\n\n--- Giskard Internal Error ---\n${err.message}\n${err.stack}`;
+                            deployLog.save();
+                            missionChannel.send('', [helpers.generateAttachment({
+                                fallback: `Deploy @ ${project.name} falhou`,
+                                color: 'danger',
+                                text: `Deploy \`${deployLog._id}\` @ \`${project.name}\` (Tag \`${tag}\`) *falhou*.`
+                            })])
+                            currentDeploys.remove(project.name);
+                        }
+                    };
+                    missionChannel.send('', [helpers.generateAttachment({
+                        fallback: `Deploy @ ${project.name} (Tag ${tag}) iniciado por ${deployer.username}`,
+                        color: 'warning',
+                        text: `Deploy \`${deployLog._id}\` @ \`${project.name}\` (Tag \`${tag}\`) *iniciado* por @${deployer.username}.`
+                    })])
+                    .catch(e => this.logger.error(e));
+
+                    var orbiter = this.random(this.orbiters),
+                        message = this.random(this.launchMessages);
+                    response.reply(message.replace(/\$/g, orbiter) + ' :rocket:');
+
+                    currentDeploys.push(project.name);
+                    var client = new SSH2Shell(sshSettings);
+                    client.connect();
+            })
+            .catch(ex => {
+                if(typeof ex === 'string') {
+                    response.reply(ex);
+                } else {
+                    this.logger.error(ex);
+                }
+            });
+    });
+
     this.respond(/deploy\s([^\s]+)/i, (response) => {
         response.sendTyping();
         let name, deployer, project, missionChannel;
